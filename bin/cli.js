@@ -16,7 +16,7 @@ program
   .name("aiyu-multi-agent")
   .description("Production-grade AI Agent Platform")
   .version(inline.CURRENT_VERSION)
-  .addHelpText("before", `\n  ${H.style.accent(`⚕ Aiyu MultiAgent v${inline.CURRENT_VERSION}`)} ${H.style.dim("—")} ${H.style.text(`${inline.getComponentCounts().agents} Agents`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().skills} Skills`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().workflows} Workflows`)}\n`)
+  .addHelpText("before", `\n  ${H.style.accent(`⚔︎ Aiyu MultiAgent v${inline.CURRENT_VERSION}`)} ${H.style.dim("—")} ${H.style.text(`${inline.getComponentCounts().agents} Agents`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().skills} Skills`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().workflows} Workflows`)}\n`)
   .addHelpText("after", `\n  ${H.style.dim("Documentation:")} ${H.style.accent("https://github.com/teeprakorn1/aiyu-multi-agent#readme")}\n`);
 
 program
@@ -190,7 +190,7 @@ program
     if (options.json) {
       console.log(JSON.stringify(report, null, 2));
     } else {
-      console.log(H.style.accent(`\n⚕ System Health Report\n`));
+      console.log(H.style.accent(`\n⚔︎ System Health Report\n`));
       console.log(H.style.border(H.BOX.topLeft + H.BOX.horizontal.repeat(50) + H.BOX.topRight));
       const statusIcon = report.readiness === "ready" ? H.style.statusGood("✓") : report.readiness === "degraded" ? H.style.statusWarn("⚠") : H.style.statusBad("✗");
       console.log(`  ${H.style.dim("Overall:")}     ${statusIcon} ${H.style.text(report.readiness)}`);
@@ -232,7 +232,7 @@ program
     if (options.id) {
       const trace = tracing.getTrace(options.id);
       if (!trace) { console.log(H.style.error(`Trace ${options.id} not found`)); return; }
-      console.log(H.style.accent(`\n⚕ Trace: ${trace.traceId}\n`));
+      console.log(H.style.accent(`\n⚔︎ Trace: ${trace.traceId}\n`));
       console.log(`  ${H.style.dim("Operation:")}  ${H.style.text(trace.operationName)}`);
       console.log(`  ${H.style.dim("Status:")}     ${H.style.text(trace.status)}`);
       console.log(`  ${H.style.dim("Duration:")}   ${H.style.text((trace.durationMs ?? "running") + "ms")}`);
@@ -246,7 +246,7 @@ program
     }
     if (options.metrics) {
       const metrics = tracing.getTraceMetrics();
-      console.log(H.style.accent(`\n⚕ Trace Metrics\n`));
+      console.log(H.style.accent(`\n⚔︎ Trace Metrics\n`));
       console.log(`  ${H.style.dim("Total traces:")}  ${H.style.text(metrics.total)}`);
       console.log(`  ${H.style.dim("Completed:")}     ${H.style.text(metrics.completed)}`);
       console.log(`  ${H.style.dim("Failed:")}        ${H.style.text(metrics.failed)}`);
@@ -257,7 +257,7 @@ program
       return;
     }
     const recent = tracing.getRecentTraces(parseInt(options.limit, 10));
-    console.log(H.style.accent(`\n⚕ Recent Traces (last ${recent.length})\n`));
+    console.log(H.style.accent(`\n⚔︎ Recent Traces (last ${recent.length})\n`));
     for (const t of recent) {
       const icon = t.status === "ok" ? H.style.statusGood("✓") : t.status === "error" ? H.style.statusBad("✗") : H.style.statusWarn("⏳");
       console.log(`  ${icon} ${H.style.text(t.traceId)}  ${H.style.dim(t.operationName.padEnd(35))} ${H.style.text((t.durationMs ?? "...") + "ms")}  ${H.style.dim("spans:" + t.spanCount)}`);
