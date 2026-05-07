@@ -6,7 +6,7 @@
  */
 
 const { Command } = require("commander");
-const chalk = require("chalk");
+const H = require("../lib/core/hermes-theme");
 const logger = require("../lib/core/logger");
 const inline = require("../lib/commands/init-inline");
 
@@ -16,8 +16,8 @@ program
   .name("aiyu-multi-agent")
   .description("Production-grade AI Agent Platform")
   .version(inline.CURRENT_VERSION)
-  .addHelpText("before", `\n  ${chalk.cyan(`Aiyu MultiAgent v${inline.CURRENT_VERSION}`)} — ${inline.getComponentCounts().agents} Agents | ${inline.getComponentCounts().skills} Skills | ${inline.getComponentCounts().workflows} Workflows\n`)
-  .addHelpText("after", `\n  Documentation: https://github.com/teeprakorn1/aiyu-multi-agent#readme\n`);
+  .addHelpText("before", `\n  ${H.style.accent(`⚕ Aiyu MultiAgent v${inline.CURRENT_VERSION}`)} ${H.style.dim("—")} ${H.style.text(`${inline.getComponentCounts().agents} Agents`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().skills} Skills`)} ${H.style.dim("|")} ${H.style.text(`${inline.getComponentCounts().workflows} Workflows`)}\n`)
+  .addHelpText("after", `\n  ${H.style.dim("Documentation:")} ${H.style.accent("https://github.com/teeprakorn1/aiyu-multi-agent#readme")}\n`);
 
 program
   .command("init")
@@ -190,26 +190,26 @@ program
     if (options.json) {
       console.log(JSON.stringify(report, null, 2));
     } else {
-      console.log(chalk.cyan(`\n🏥 System Health Report\n`));
-      console.log(chalk.gray("─".repeat(50)));
-      const statusIcon = report.readiness === "ready" ? chalk.green("✓") : report.readiness === "degraded" ? chalk.yellow("⚠") : chalk.red("✗");
-      console.log(`  Overall:     ${statusIcon} ${report.readiness}`);
-      console.log(`  Uptime:      ${Math.round(report.uptimeMs / 1000)}s`);
-      console.log(`  Version:     v${report.version}`);
-      console.log(`  Node:        ${report.nodeVersion}`);
-      console.log(`  PID:         ${report.pid}`);
-      console.log(chalk.gray("\n  Components:"));
+      console.log(H.style.accent(`\n⚕ System Health Report\n`));
+      console.log(H.style.border(H.BOX.topLeft + H.BOX.horizontal.repeat(50) + H.BOX.topRight));
+      const statusIcon = report.readiness === "ready" ? H.style.statusGood("✓") : report.readiness === "degraded" ? H.style.statusWarn("⚠") : H.style.statusBad("✗");
+      console.log(`  ${H.style.dim("Overall:")}     ${statusIcon} ${H.style.text(report.readiness)}`);
+      console.log(`  ${H.style.dim("Uptime:")}      ${H.style.text(Math.round(report.uptimeMs / 1000) + "s")}`);
+      console.log(`  ${H.style.dim("Version:")}     ${H.style.text("v" + report.version)}`);
+      console.log(`  ${H.style.dim("Node:")}        ${H.style.text(report.nodeVersion)}`);
+      console.log(`  ${H.style.dim("PID:")}         ${H.style.text(report.pid)}`);
+      console.log(H.style.dim("\n  Components:"));
       for (const [name, check] of Object.entries(report.checks)) {
-        const icon = check.status === "ok" || check.status === "ready" || check.status === "configured" || check.status === "available" || check.status === "healthy" ? chalk.green("✓") : check.status === "degraded" || check.status === "warning" || check.status === "limited" ? chalk.yellow("⚠") : chalk.red("✗");
-        console.log(`    ${icon} ${name.padEnd(18)} ${check.status}`);
-        if (check.message) console.log(`      ${chalk.gray(check.message)}`);
-        if (check.heapUsedMB) console.log(`      ${chalk.gray(`heap: ${check.heapUsedMB}MB / ${check.heapTotalMB}MB`)}`);
+        const icon = check.status === "ok" || check.status === "ready" || check.status === "configured" || check.status === "available" || check.status === "healthy" ? H.style.statusGood("✓") : check.status === "degraded" || check.status === "warning" || check.status === "limited" ? H.style.statusWarn("⚠") : H.style.statusBad("✗");
+        console.log(`    ${icon} ${H.style.text(name.padEnd(18))} ${H.style.dim(check.status)}`);
+        if (check.message) console.log(`      ${H.style.dim(check.message)}`);
+        if (check.heapUsedMB) console.log(`      ${H.style.dim(`heap: ${check.heapUsedMB}MB / ${check.heapTotalMB}MB`)}`);
       }
-      console.log(chalk.gray("\n  System:"));
-      console.log(`    CPUs:       ${report.system.cpuCount}`);
-      console.log(`    Memory:     ${report.system.freeMemoryMB}MB free / ${report.system.totalMemoryMB}MB total`);
-      console.log(`    Load:       ${report.system.loadAvg.map(l => l.toFixed(2)).join(", ")}`);
-      console.log(chalk.gray("─".repeat(50)));
+      console.log(H.style.dim("\n  System:"));
+      console.log(`    ${H.style.dim("CPUs:")}       ${H.style.text(report.system.cpuCount)}`);
+      console.log(`    ${H.style.dim("Memory:")}     ${H.style.text(report.system.freeMemoryMB + "MB free / " + report.system.totalMemoryMB + "MB total")}`);
+      console.log(`    ${H.style.dim("Load:")}       ${H.style.text(report.system.loadAvg.map(l => l.toFixed(2)).join(", "))}`);
+      console.log(H.style.border(H.BOX.bottomLeft + H.BOX.horizontal.repeat(50) + H.BOX.bottomRight));
       console.log("");
     }
   });
@@ -226,41 +226,41 @@ program
     if (options.otel) {
       const otel = tracing.exportOpenTelemetry(options.otel);
       if (otel) console.log(JSON.stringify(otel, null, 2));
-      else console.log(chalk.red(`Trace ${options.otel} not found`));
+      else console.log(H.style.error(`Trace ${options.otel} not found`));
       return;
     }
     if (options.id) {
       const trace = tracing.getTrace(options.id);
-      if (!trace) { console.log(chalk.red(`Trace ${options.id} not found`)); return; }
-      console.log(chalk.cyan(`\n🔍 Trace: ${trace.traceId}\n`));
-      console.log(`  Operation:  ${trace.operationName}`);
-      console.log(`  Status:     ${trace.status}`);
-      console.log(`  Duration:   ${trace.durationMs ?? "running"}ms`);
-      console.log(`  Spans:      ${trace.spans.length}`);
+      if (!trace) { console.log(H.style.error(`Trace ${options.id} not found`)); return; }
+      console.log(H.style.accent(`\n⚕ Trace: ${trace.traceId}\n`));
+      console.log(`  ${H.style.dim("Operation:")}  ${H.style.text(trace.operationName)}`);
+      console.log(`  ${H.style.dim("Status:")}     ${H.style.text(trace.status)}`);
+      console.log(`  ${H.style.dim("Duration:")}   ${H.style.text((trace.durationMs ?? "running") + "ms")}`);
+      console.log(`  ${H.style.dim("Spans:")}      ${H.style.text(trace.spans.length)}`);
       for (const span of trace.spans) {
-        const icon = span.status === "ok" ? chalk.green("✓") : chalk.red("✗");
-        console.log(`    ${icon} ${span.operationName.padEnd(30)} ${span.durationMs ?? "..."}ms`);
+        const icon = span.status === "ok" ? H.style.statusGood("✓") : H.style.statusBad("✗");
+        console.log(`    ${icon} ${H.style.text(span.operationName.padEnd(30))} ${H.style.dim((span.durationMs ?? "...") + "ms")}`);
       }
       console.log("");
       return;
     }
     if (options.metrics) {
       const metrics = tracing.getTraceMetrics();
-      console.log(chalk.cyan(`\n📊 Trace Metrics\n`));
-      console.log(`  Total traces:  ${metrics.total}`);
-      console.log(`  Completed:     ${metrics.completed}`);
-      console.log(`  Failed:        ${metrics.failed}`);
-      console.log(`  Avg duration:  ${metrics.avgDurationMs}ms`);
-      console.log(`  P95 duration:  ${metrics.p95DurationMs}ms`);
-      console.log(`  Total spans:   ${metrics.totalSpans}`);
+      console.log(H.style.accent(`\n⚕ Trace Metrics\n`));
+      console.log(`  ${H.style.dim("Total traces:")}  ${H.style.text(metrics.total)}`);
+      console.log(`  ${H.style.dim("Completed:")}     ${H.style.text(metrics.completed)}`);
+      console.log(`  ${H.style.dim("Failed:")}        ${H.style.text(metrics.failed)}`);
+      console.log(`  ${H.style.dim("Avg duration:")}  ${H.style.text(metrics.avgDurationMs + "ms")}`);
+      console.log(`  ${H.style.dim("P95 duration:")}  ${H.style.text(metrics.p95DurationMs + "ms")}`);
+      console.log(`  ${H.style.dim("Total spans:")}   ${H.style.text(metrics.totalSpans)}`);
       console.log("");
       return;
     }
     const recent = tracing.getRecentTraces(parseInt(options.limit, 10));
-    console.log(chalk.cyan(`\n📋 Recent Traces (last ${recent.length})\n`));
+    console.log(H.style.accent(`\n⚕ Recent Traces (last ${recent.length})\n`));
     for (const t of recent) {
-      const icon = t.status === "ok" ? chalk.green("✓") : t.status === "error" ? chalk.red("✗") : chalk.yellow("⏳");
-      console.log(`  ${icon} ${t.traceId}  ${t.operationName.padEnd(35)} ${t.durationMs ?? "..."}ms  spans:${t.spanCount}`);
+      const icon = t.status === "ok" ? H.style.statusGood("✓") : t.status === "error" ? H.style.statusBad("✗") : H.style.statusWarn("⏳");
+      console.log(`  ${icon} ${H.style.text(t.traceId)}  ${H.style.dim(t.operationName.padEnd(35))} ${H.style.text((t.durationMs ?? "...") + "ms")}  ${H.style.dim("spans:" + t.spanCount)}`);
     }
     console.log("");
   });
@@ -281,8 +281,12 @@ program
       if (cfgDir) tracing.enablePersistentTraces(require("path").join(cfgDir, "traces"));
     }
 
-    console.log(chalk.cyan("\n🔧 Aiyu Dev Mode"));
-    console.log(chalk.gray("  Type input to run agent. Type 'exit' to quit.\n"));
+    console.log(H.renderStartupBanner({
+      version: inline.CURRENT_VERSION,
+      model: "dev-mode",
+      contextWindow: "∞",
+    }));
+    console.log(H.style.dim("  Type input to run agent. Type 'exit' to quit.\n"));
 
     const agentName = options.agent || "default";
     const verbose = options.verbose || false;
@@ -292,9 +296,9 @@ program
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
     const prompt = () => {
-      rl.question(chalk.green(`[${agentName}] > `), async (input) => {
+      rl.question(H.style.accent(`[${agentName}] ${H.PROMPT_SYMBOLS.idle}`), async (input) => {
         if (!input || input.trim() === "exit" || input.trim() === "quit") {
-          console.log(chalk.gray("  Exiting dev mode..."));
+          console.log(H.style.dim("  Exiting dev mode..."));
           rl.close();
           return;
         }
@@ -307,30 +311,30 @@ program
             provider: "mock",
             noCache: true,
             onStep: verbose ? (step, state) => {
-              console.log(chalk.blue(`  Step ${step.step}: ${step.thought?.slice(0, 120)}${step.thought?.length > 120 ? "..." : ""}`));
+              console.log(H.style.dim(`  Step ${step.step}: ${step.thought?.slice(0, 120)}${step.thought?.length > 120 ? "..." : ""}`));
               if (step.toolCalls.length > 0) {
                 for (const tc of step.toolCalls) {
                   if (tc.error) {
-                    console.log(chalk.red(`    ❌ ${tc.tool}: ${tc.error}`));
+                    console.log(H.style.statusBad(`    ✗ ${tc.tool}: ${tc.error}`));
                   } else {
-                    console.log(chalk.green(`    ✅ ${tc.tool} (${tc.duration_ms}ms)`));
+                    console.log(H.style.statusGood(`    ✓ ${tc.tool} (${tc.duration_ms}ms)`));
                   }
                 }
               }
             } : undefined,
           });
           const elapsed = Date.now() - startTime;
-          const statusIcon = result.status === "complete" ? chalk.green("✓") : chalk.red("✗");
-          console.log(`\n  ${statusIcon} ${result.status} (${elapsed}ms, ${result.steps.length} steps)`);
+          const statusIcon = result.status === "complete" ? H.style.statusGood("✓") : H.style.statusBad("✗");
+          console.log(`\n  ${statusIcon} ${H.style.text(result.status)} ${H.style.dim(`(${elapsed}ms, ${result.steps.length} steps)`)}`);
           if (result.output) {
-            console.log(chalk.white(`  ${result.output.slice(0, 500)}${result.output.length > 500 ? "..." : ""}`));
+            console.log(H.style.text(`  ${result.output.slice(0, 500)}${result.output.length > 500 ? "..." : ""}`));
           }
           if (result.error) {
-            console.log(chalk.red(`  Error: ${result.error}`));
+            console.log(H.style.error(`  Error: ${result.error}`));
           }
           console.log("");
         } catch (err) {
-          console.log(chalk.red(`  Error: ${err.message}\n`));
+          console.log(H.style.error(`  Error: ${err.message}\n`));
         }
         prompt();
       });
@@ -342,7 +346,7 @@ program
   .command("generate <type> [subtype]")
   .description("[experimental] Generate MCP server / config")
   .action((type, subtype) => {
-    console.log(chalk.yellow(`\n  ⚠️ "aiyu-multi-agent generate ${type} ${subtype || ""}" is experimental and not yet implemented\n`));
+    console.log(H.style.statusWarn(`\n  ⚠ "aiyu-multi-agent generate ${type} ${subtype || ""}" is experimental and not yet implemented\n`));
   });
 
 program
