@@ -10,6 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.5.0] - 2026-05-08
 
+### Phase 5.3 — Trust Model Persistence + Claude-style 3-Level Trust
+
+#### Added
+
+- **Persistent default trust level** — `~/.aiyu/config.json` stores `default_trust_level` (ask/auto/yolo)
+  - XDG-style: stored alongside other user config, not mixed with allowlist
+  - Load priority: `--trust` CLI flag > user config > `"auto"` fallback
+  - `/trust` slash command saves new level as default immediately
+- **`user-config.setTrustLevel(level)`** — validates (ask|auto|yolo) + writes config atomically
+- **Startup banner shows trust level** — `🔒 ask`, `⚖️ auto`, or `🔥 yolo` next to provider/model
+- **`cli-ux-principles` skill** — `.windsurf/skills/cli-ux-principles/SKILL.md`
+  - 5 UX principles for AI CLI platforms (trust, lifecycle, interruptibility, persistence, identity)
+  - Architecture diagrams, Hermes parity matrix, file map
+  - Reusable by any agent building CLI tools
+- **Solution documentation** — `docs/Solution-aiyu-Approval-System.md`
+  - Full implementation details, parity matrix, testing commands
+  - `docs/HERMESBRAIN-REFERENCE.md` — copy-ready reference for HermesBrain vault
+
+#### Changed
+
+- `lib/commands/chat.js` — `/trust` slash command now calls `userConfig.setTrustLevel()` to persist
+- `bin/cli.js` — `--strict`/`--yolo` replaced with unified `--trust <ask|auto|yolo>`
+- `lib/core/user-config.js` — added `default_trust_level` field + `setTrustLevel()` helper
+
+---
+
 ### Phase 5.2 — Hermes-style Dangerous-Command Approval
 
 #### Added

@@ -165,8 +165,7 @@ program
   .option("-m, --model <model>", "LLM model name")
   .option("-r, --resume [sessionId]", "Resume a saved session (omit for interactive picker)")
   .option("-l, --list", "List saved sessions and exit")
-  .option("--strict", "Ask approval for ALL commands (paranoid mode)")
-  .option("--yolo", "Skip all command approvals (CI/CD mode)")
+  .option("--trust <level>", "Trust level: ask (approve all), auto (safe=auto, dangerous=ask), yolo (no approvals)", "auto")
   .action(async (options) => {
     const chatCmd = require("../lib/commands/chat");
     await chatCmd.run(options);

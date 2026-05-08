@@ -51,6 +51,7 @@
 | `deployment-procedures` | 1 | devops-engineer |
 | `mcp-builder` | 1 | (no direct agent) |
 | `geo-fundamentals` | 1 | (no direct agent) |
+| `cli-ux-principles` | 1 | (platform-wide) |
 
 ### Game Development Skills (Sub-skills)
 | Skill | Agent |
