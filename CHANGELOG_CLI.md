@@ -30,6 +30,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Per-turn persistence** — Each successful assistant response is saved as a "turn" with user message, assistant response, and ReAct steps
 - **Steps stored in SQLite** — ReAct loop steps (thought, toolCalls, durationMs) persisted per turn for replay/debug
 - **`turnCounter`** — Tracks conversation turns within a session, preserved across `/load` and `/browse`
+- **Hermes-style tool lifecycle display** — 3-layer event callback pattern (preparing → completed)
+  - `renderToolPreparing(tool)` — prints `┊ 📖 preparing fs.read…` before tool executes
+  - `renderToolCompleted(tool, args, durationMs)` — per-tool formatter prints `┊ 📖 read  src/app.js  0.3s`
+  - `_resolveToolIcon()` — maps namespaced tools (`fs.read`, `shell.exec`) → emoji icons
+  - Tool icons: 📖 read, ✍️ write, ✏️ edit, 📂 glob, 🔍 grep, 💻 shell, 🌐 fetch, 🤖 delegate, 🧠 memory, 🌍 web, 📝 plan
+- **`tool_started` / `tool_completed` events** — Event callback pattern in `chat-session.js` and `react-loop.js`
+  - `onStep({ type: "tool_started", tool, args })` fires before execution
+  - `onStep({ type: "tool_completed", tool, args, duration_ms, result/error })` fires after
+  - `onToolEvent` callback added to `runAgent()` for non-chat execution path
 
 #### Changed
 
