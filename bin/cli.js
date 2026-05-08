@@ -277,6 +277,7 @@ program
   .action(async (options) => {
     const agentRuntime = require("../lib/core/agent-runtime");
     const tracing = require("../lib/core/tracing");
+    const { startDevApp } = require("../lib/ui/dev-app");
 
     if (options.trace) {
       const config = require("../lib/core/config");
@@ -284,65 +285,21 @@ program
       if (cfgDir) tracing.enablePersistentTraces(require("path").join(cfgDir, "traces"));
     }
 
-    console.log(H.renderStartupBanner({
-      version: inline.CURRENT_VERSION,
-      model: "dev-mode",
-      contextWindow: "∞",
-    }));
-    console.log(H.style.dim("  Type input to run agent. Type 'exit' to quit.\n"));
-
     const agentName = options.agent || "default";
     const verbose = options.verbose || false;
 
-    // Simple REPL loop
-    const readline = require("readline");
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-    const prompt = () => {
-      rl.question(H.style.accent(`[${agentName}] ${H.PROMPT_SYMBOLS.idle}`), async (input) => {
-        if (!input || input.trim() === "exit" || input.trim() === "quit") {
-          console.log(H.style.dim("  Exiting dev mode..."));
-          rl.close();
-          return;
-        }
-        try {
-          const startTime = Date.now();
-          const result = await agentRuntime.runAgent({
-            input: input.trim(),
-            agentName,
-            projectDir: process.cwd(),
-            provider: "mock",
-            noCache: true,
-            onStep: verbose ? (step, state) => {
-              console.log(H.style.dim(`  Step ${step.step}: ${step.thought?.slice(0, 120)}${step.thought?.length > 120 ? "..." : ""}`));
-              if (step.toolCalls.length > 0) {
-                for (const tc of step.toolCalls) {
-                  if (tc.error) {
-                    console.log(H.style.statusBad(`    ✗ ${tc.tool}: ${tc.error}`));
-                  } else {
-                    console.log(H.style.statusGood(`    ✓ ${tc.tool} (${tc.duration_ms}ms)`));
-                  }
-                }
-              }
-            } : undefined,
-          });
-          const elapsed = Date.now() - startTime;
-          const statusIcon = result.status === "complete" ? H.style.statusGood("✓") : H.style.statusBad("✗");
-          console.log(`\n  ${statusIcon} ${H.style.text(result.status)} ${H.style.dim(`(${elapsed}ms, ${result.steps.length} steps)`)}`);
-          if (result.output) {
-            console.log(H.style.text(`  ${result.output.slice(0, 500)}${result.output.length > 500 ? "..." : ""}`));
-          }
-          if (result.error) {
-            console.log(H.style.error(`  Error: ${result.error}`));
-          }
-          console.log("");
-        } catch (err) {
-          console.log(H.style.error(`  Error: ${err.message}\n`));
-        }
-        prompt();
-      });
-    };
-    prompt();
+    await startDevApp({
+      agentName,
+      model: "dev-mode",
+      verbose,
+      onRun: (input) => agentRuntime.runAgent({
+        input,
+        agentName,
+        projectDir: process.cwd(),
+        provider: "mock",
+        noCache: true,
+      }),
+    });
   });
 
 program

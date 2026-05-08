@@ -10,6 +10,110 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.5.0] - 2026-05-08
 
+### Phase 5.7 — Ghost Hint Cursor Fix + Single-Slash Hint + Picker Blank-Line Gap
+
+#### Fixed
+
+- **Ghost hint cursor desync on Windows** — after showing or clearing the ghost hint on the line below the prompt, the terminal cursor was left at the hint's end column instead of the input's end; readline's next `_refreshLine()` computed relative moves from the wrong spot, producing a huge gap between characters (e.g. `/mo` + `d` appeared as `/mo                                                            d`)
+  - Fix: both `_clearGhostHint()` and the ghost hint writer now explicitly reposition the cursor to `promptLen + cursorPos` after moving back up
+- **Interactive picker leaves blank-line gap after ESC** — `pickCommand()` and `pickSession()` used a pre-calculated `LINES` constant for cursor movement; when the menu was taller than remaining terminal rows, drawing caused scrolling and the actual drawn lines diverged from `LINES`; `cleanup()` moved the cursor back by `LINES` from its current position but missed lines that had scrolled into scrollback → `clearScreenDown()` couldn't reach them → blank gap
+  - Fix: removed pre-allocation (`\n.repeat(LINES)`) and replaced `LINES`-based cursor math with `_drawnLines` tracking — `draw()` increments `_drawnLines` per line written, `cleanup()` and `onKey` redraws use `_drawnLines` to move back exactly the right number of lines
+
+#### Added
+
+- **Single-slash ghost hint** — typing `/` alone now shows a hint for the first matching command with a count of remaining matches, e.g. `/new  — Start a new session (+27 more)`; previously hints only appeared for prefixes of length ≥ 2
+
+#### Changed
+
+- `lib/commands/chat.js` — `_clearGhostHint()` repositions cursor to readline-expected position; ghost hint writer does the same; `pickCommand()` and `pickSession()` use `_drawnLines` tracking instead of `LINES` constant; single-slash hint enabled
+
+---
+
+### Phase 5.6 — Streaming Display Bug Fixes + Layout Redesign
+
+#### Fixed
+
+- **Critical: `streamingBoxOpen` not reset on error/cancel mid-stream** — if an API error or Ctrl+C occurred while the streaming box was open, `writeStreamBoxBottom()` was never called; `streamingBoxOpen` (session-scoped) stayed `true` for all subsequent turns, causing `onStep "thinking"` to silently skip, `tool_started` to draw a box bottom with no matching top, and the terminal to be permanently corrupted for that session
+  - Fix: `catch` block now calls `writeStreamBoxBottom()` when `streamingBoxOpen` is true before handling the error or cancel
+- **`run.js` `jsonMode` ReferenceError** — `const jsonMode` was declared at line 49 but referenced at line 29 inside the auto-route block → `ReferenceError` crash whenever auto-routing fired with `--json` flag
+  - Fix: moved `const jsonMode` declaration to before the auto-route block
+- **`tool_completed` double output** — `renderToolCompleted()` was always called followed by a separate `✓ tool: result` status line → every tool result printed two lines; on success the second line was purely redundant
+  - Fix: removed the duplicate `✓` status line on success; error line on `evt.error` is kept for visibility
+- **Dead event cases in `onStep`** — `case "tool_call"`, `case "tool_result"`, `case "tool_error"` were never emitted by `chat-session.js`; errors route through `tool_completed` with `evt.error`; all three dead cases removed
+- **`stopStatusBar()` erasing streaming content** — `\r\x1b[2K` (erase current line) was written every call regardless of whether status bar was actually active, causing the last line of streamed content inside the box to be silently erased each turn
+  - Fix: `\r\x1b[2K` now only runs when `statusBarInterval` is non-null (i.e. the bar was actually rendering)
+- **`onStep` "thinking" restarting status bar inside open streaming box** — when `onStep({ type: "thinking" })` fired after streaming, it called `startStatusBar()` which placed a new status bar on the content line inside the box; the subsequent `stopStatusBar()` then erased that content line
+  - Fix: `case "thinking"` now breaks immediately when `streamingBoxOpen = true`, leaving the box untouched
+- **`Working...` line persisting across every turn** — `process.stdout.write("... Working...\n")` ended with `\n`, moving the cursor to the next line so the status bar's `\r` overwrote the wrong line; "Working..." was never cleared and accumulated each turn
+  - Fix: removed trailing `\n` so the status bar overwrites the same line and `stopStatusBar()` clears it cleanly
+
+#### Changed
+
+- **Response footer unified into one line below box** — previously `[Done · Xs]` was printed *inside* the open streaming box before it was closed, and `renderAgentSignature()` was a separate dim line; both are now merged into a single footer line printed *after* `writeStreamBoxBottom()`:
+  ```
+  Done · 4.8s · accessibility-specialist (◕‿◕)♿
+  ```
+  - Token count appended when non-zero: `Done · 4.8s · 120 tok · agent-name (kaomoji)`
+  - Applies to both streaming path and non-streaming (`renderResponseBox`) path
+- **Tool call display closes streaming box cleanly** — `case "tool_started"` in `onStep` now closes the streaming box (`writeStreamBoxBottom()`) before printing the tool preparing line, then resets `streamedOutput`, `streamRawBuffer`, `streamPrintedCodepoints` so the next LLM step opens a fresh box; produces clean multi-step layout:
+  ```
+  ╭─ ⚔ Aiyu ──────────────────────────────────╮
+      Let me read that file...
+  ╰─────────────────────────────────────────────╯
+    ┊ 📄 preparing fs.read…
+    ✓ fs.read   package.json   0.3s
+  ╭─ ⚔ Aiyu ──────────────────────────────────╮
+      Here's what I found: ...
+  ╰─────────────────────────────────────────────╯
+    Done · 2.1s · accessibility-specialist (◕‿◕)♿
+  ```
+
+---
+
+### Phase 5.5 — Agent Auto-Routing (Intelligent Agent Selection)
+
+#### Added
+
+- **`lib/core/agent-router.js`** — Keyword-based automatic agent routing module
+  - Parses agent frontmatter (`Triggers on`, `Use when/for`, skill names) to build keyword index
+  - `route(input, projectDir)` — scores all agents against user input, returns best match
+  - `scoreAgent()` — weighted scoring: exact keyword match (+10), partial match (+3), agent name match (+20), description word match (+2)
+  - `DOMAIN_FALLBACKS` — 18 domain keyword groups for fallback matching (frontend, backend, debug, devops, security, database, testing, mobile, cloud, docker, documentation, go, angular, accessibility, i18n, game, iot, data)
+  - `listAgents()` — list all agents with routing keywords (for `/agents` command)
+  - CRLF-safe frontmatter parsing (Windows compatibility)
+  - Per-project caching of agent metadata
+- **Auto-route in `aiyu-multi-agent run`** — when no `--agent` specified, picks best agent from input instead of using first `.md` file
+  - Prints `Auto-routed → <agent> (score: N, method: keyword)` when auto-routed
+  - Falls back to `findDefaultAgent()` if no good match
+- **Auto-route suggestion in chat** — per-message lightweight check shows `💡 Tip: <agent> may be a better fit` when another agent scores ≥10 higher
+- **`/agent [name]`** — switch agent mid-session
+  - `/agent debugger` — switch to specific agent by name
+  - `/agent` — auto-route from last user message
+  - `/agent backend` — auto-route using "backend" as input
+  - Re-creates session with new agent, preserves message history
+- **`/agents`** — list all available agents with their routing keywords
+- **`findAgentByInput(input, projectDir)`** in `lib/utils.js` — utility wrapper around agent-router with fallback
+
+#### Changed
+
+- `lib/commands/run.js` — replaced `findDefaultAgent()` with `agentRouter.route()` when no `--agent` flag
+- `lib/commands/chat.js` — added `/agent`, `/agents` slash commands, per-message auto-route suggestion
+- `lib/utils.js` — added `findAgentByInput()` export
+
+#### Routing Test Results
+
+| Input | Routed Agent | Score |
+|-------|-------------|-------|
+| "fix the login bug" | `debugger` | 29 |
+| "create a new API endpoint" | `backend-specialist` | 70 |
+| "deploy to production" | `devops-engineer` | 36 |
+| "make the button responsive" | `frontend-specialist` | 15 |
+| "docker compose setup" | `docker-developer` | 30 |
+| "security vulnerability scan" | `security-auditor` | 30 |
+| "write unit tests" | `test-engineer` | 27 |
+
+---
+
 ### Phase 5.4 — 6 UX Fixes (Mirror Energy + Signature Footer + Persona Kaomoji)
 
 #### Added
