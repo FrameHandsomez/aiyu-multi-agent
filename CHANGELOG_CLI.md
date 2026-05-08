@@ -8,6 +8,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.0] - 2026-05-08
+
+### Phase 5 — SQLite Persistence + Interactive Session Picker
+
+#### Added
+
+- **`lib/core/session-store.js`** — SQLite session persistence with `better-sqlite3` (file-based fallback if native module unavailable)
+  - Schema: `sessions`, `messages`, `steps` tables with WAL mode
+  - Methods: `createSession`, `saveTurn`, `listSessions`, `loadSession`, `deleteSession`, `cleanupOldSessions`, `searchSessions`
+  - Backward compatible: reads legacy `~/.aiyu/history/*.json` files if session not found in SQLite
+- **`/browse`** — Interactive arrow-key session picker with live filtering
+  - Arrow keys (↑↓) to navigate, Enter to select, Esc to cancel
+  - Type characters to filter sessions by title or ID
+  - Shows title, agent name, date, and truncated session ID
+- **`--resume [sessionId]`** — Resume saved session from CLI
+  - `aiyu-multi-agent chat --resume <id>` — resume by specific ID
+  - `aiyu-multi-agent chat --resume` — open interactive picker (same as `/browse`)
+- **`--list`** — List saved sessions and exit
+  - `aiyu-multi-agent chat --list` — prints all sessions with title + date
+- **Per-turn persistence** — Each successful assistant response is saved as a "turn" with user message, assistant response, and ReAct steps
+- **Steps stored in SQLite** — ReAct loop steps (thought, toolCalls, durationMs) persisted per turn for replay/debug
+- **`turnCounter`** — Tracks conversation turns within a session, preserved across `/load` and `/browse`
+
+#### Changed
+
+- `lib/commands/chat.js` — Replaced file-based `saveSession`/`listSessions`/`loadSession` with `sessionStore` equivalents
+- `/delete` — Now uses `sessionStore.deleteSession()` (works for both SQLite and legacy files)
+- `/new` — Resets `turnCounter` to 0
+- `/load` — Restores `turnCounter` from loaded session message count
+- Auto-save after each turn — Now calls `sessionStore.saveTurn()` instead of rewriting entire JSON file
+
+#### Hermes Parity + Leapfrog
+
+| Feature | Hermes | aiyu Phase 5 |
+|---------|--------|--------------|
+| `--resume` | ✅ | ✅ |
+| `--continue` | ✅ | ✅ (via `--resume` without args) |
+| `sessions list` | ✅ | ✅ (via `--list`) |
+| `sessions browse` | ✅ | ✅ (via `/browse` or `--resume`) |
+| `/history` | ✅ | ✅ |
+| `/save` | ✅ | ✅ |
+| Backend | File-based | **SQLite** — faster, structured, searchable |
+| Step persistence | ❌ (assumed) | **Steps table** — ReAct loop preserved |
+| Live filter in picker | ❌ (assumed) | **Type to filter** |
+
+---
+
 ## [0.4.0] - 2026-05-08
 
 ### Phase 4 — Session Management + File Attachments + Provider Switching
@@ -135,6 +182,7 @@ All commands and `bin/cli.js` now use `H.style.*` instead of raw `chalk` calls f
 
 | Hash | Date | Message |
 |------|------|---------|
+| `TBD` | 2026-05-08 | Phase 5: SQLite persistence + interactive session picker |
 | `9ea13a4` | 2026-05-08 | Phase 4: Session management + file attachments + provider switching |
 | `c0fa973` | 2026-05-07 | UI: Change agentRunning symbol from ⚕ to ⚔ |
 | `775a0e1` | 2026-05-07 | UI: Change startup banner emoji from ⚕ to ⚔ |
@@ -150,4 +198,4 @@ All commands and `bin/cli.js` now use `H.style.*` instead of raw `chalk` calls f
 | `90c37ba` | 2026-05-07 | feat(cli): Phase 2 — Hermes feature parity |
 | `70eec4e` | 2026-05-07 | refactor: migrate CLI commands from chalk to hermes-theme (H.style) |
 
-**Total: 15 commits | +1,551 / −322 lines across 18 files**
+**Total: 16 commits | +1,850 / −380 lines across 21 files**

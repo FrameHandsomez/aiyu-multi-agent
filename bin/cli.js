@@ -163,6 +163,8 @@ program
   .option("-a, --agent <name>", "Agent to chat with (default: first found)")
   .option("-p, --provider <provider>", "LLM provider: openai, claude, local, mock")
   .option("-m, --model <model>", "LLM model name")
+  .option("-r, --resume [sessionId]", "Resume a saved session (omit for interactive picker)")
+  .option("-l, --list", "List saved sessions and exit")
   .action(async (options) => {
     const chatCmd = require("../lib/commands/chat");
     await chatCmd.run(options);
