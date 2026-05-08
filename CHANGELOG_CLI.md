@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`tool_completed` double output** — `renderToolCompleted()` was always called followed by a separate `✓ tool: result` status line → every tool result printed two lines; on success the second line was purely redundant
   - Fix: removed the duplicate `✓` status line on success; error line on `evt.error` is kept for visibility
 - **Dead event cases in `onStep`** — `case "tool_call"`, `case "tool_result"`, `case "tool_error"` were never emitted by `chat-session.js`; errors route through `tool_completed` with `evt.error`; all three dead cases removed
+- **`renderAgentSignature()` dead code removed** — function and its export in `hermes-theme.js` removed after all call sites were replaced by the unified inline footer in Phase 5.6
 - **`stopStatusBar()` erasing streaming content** — `\r\x1b[2K` (erase current line) was written every call regardless of whether status bar was actually active, causing the last line of streamed content inside the box to be silently erased each turn
   - Fix: `\r\x1b[2K` now only runs when `statusBarInterval` is non-null (i.e. the bar was actually rendering)
 - **`onStep` "thinking" restarting status bar inside open streaming box** — when `onStep({ type: "thinking" })` fired after streaming, it called `startStatusBar()` which placed a new status bar on the content line inside the box; the subsequent `stopStatusBar()` then erased that content line
