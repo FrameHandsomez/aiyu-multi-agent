@@ -10,6 +10,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.5.0] - 2026-05-08
 
+### Phase 5.4 — 6 UX Fixes (Mirror Energy + Signature Footer + Persona Kaomoji)
+
+#### Added
+
+- **Communication Style in system prompt** — `prompt-builder.js` now injects "Match user's energy and length" rule
+  - Short greeting → short reply (1-2 lines)
+  - Detailed question → detailed answer
+  - Never dump capability menus unless explicitly asked
+- **`renderAgentSignature(agentName)`** — Hermes-style footer signature (content-first, metadata-second)
+  - e.g., `                    ─ accessibility-specialist (◕‿◕)♿`
+  - Replaces verbose header that printed every turn
+- **`PERSONA_KAOMOJI` table** — 15 persona-distinct kaomoji replacing generic 🤖
+  - accessibility: (◕‿◕)♿, frontend: (｡◕‿◕｡)✧, backend: ╰(´◓ω◔`)╯, debug: (¬､¬)🔍, security: ⚔(ಠ_ಠ), etc.
+  - Default fallback: (ฅ'ω'ฅ)
+
+#### Fixed
+
+- **[Step 1] Thinking... duplicate removed** — replaced with kaomoji spinner, only shown when content is substantial (>10 chars)
+- **0 tokens hidden** — `[Done · 0.8s]` instead of `[Done · 0.8s, 0 tokens]` when provider doesn't count
+- **Markdown asterisks stripped from streaming** — `**bold**` → `bold` in onToken path (full render in renderResponseBox)
+
+#### Changed
+
+- `lib/core/prompt-builder.js` — added `## Communication Style` section
+- `lib/core/hermes-theme.js` — added `PERSONA_KAOMOJI`, `renderAgentSignature()`
+- `lib/commands/chat.js` — thinking event uses kaomoji spinner, footer signature, markdown strip, hide 0 tokens
+
+---
+
 ### Phase 5.3 — Trust Model Persistence + Claude-style 3-Level Trust
 
 #### Added
