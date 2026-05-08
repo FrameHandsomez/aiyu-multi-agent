@@ -10,6 +10,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.5.0] - 2026-05-08
 
+### Phase 5.2 — Hermes-style Dangerous-Command Approval
+
+#### Added
+
+- **`lib/core/command-classifier.js`** — 3-tier command safety analysis (safe / moderate / dangerous)
+  - `classify(cmd)` → `{ tier, reason }` using `ALLOWED_COMMANDS` + `READ_ONLY` + `WRITE_CAPABLE` sets
+  - `DANGEROUS_PATTERNS` — regex patterns for rm -rf, sudo, pipe-to-shell, fork bomb, etc.
+  - `MODERATE_PATTERNS` — npm install, git checkout/merge/rebase, docker rm, etc.
+  - `BLOCKED_FLAGS` integration — `-e`, `-c`, `-i`, `--eval` always dangerous
+- **`lib/core/approval-store.js`** — JSON allowlist persistence (`~/.aiyu/allowlist.json`)
+  - Scopes: `once` (no persistence), `session` (in-memory), `always` (JSON file)
+  - File-based locking (`.lock` file) for concurrent write safety
+  - `recordApproval()`, `isApproved()`, `listApprovals()`, `revokeApproval()`
+  - SHA-256 hash of command for allowlist matching + drift detection
+- **`lib/core/approval-prompt.js`** — Interactive TUI approval panel (Hermes-style)
+  - Choices: `once` / `session` / `always` / `deny` / `view` (view only if command > 60 chars)
+  - "always" choice hidden for `dangerous` tier commands
+  - 60s auto-deny timeout (Hermes parity)
+  - Non-TTY fallback → auto-deny
+- **`guardrails.sandboxExecWithApproval()`** — Async approval-integrated exec
+  - Classifies command → checks allowlist → prompts if needed → executes
+  - Supports `strictMode` (ask even for safe) and `yoloMode` (skip all)
+  - User-approved commands outside `ALLOWED_COMMANDS` still run with env sanitization
+- **`shell.exec` tool** — Now uses `sandboxExecWithApproval` instead of hard block
+  - Returns exit code 126 for `APPROVAL_DENIED`
+  - Passes `_strictMode` and `_yoloMode` through tool args
+- **CLI flags**: `--strict` (paranoid mode), `--yolo` (CI/CD mode)
+- **Slash commands**: `/yolo` (toggle), `/trust` (session-approve moderate cmds), `/allowlist` (list/revoke)
+
+#### Changed
+
+- `lib/core/tool-definitions.js` — `shell.exec` replaced inline dangerous-pattern check + `sandboxExec` with `sandboxExecWithApproval`
+- `lib/core/chat-session.js` — Accepts `strictMode` / `yoloMode` options, passes to tool args
+- `lib/core/react-loop.js` — Passes `_strictMode` / `_yoloMode` in tool args
+- `lib/commands/chat.js` — Initializes `yoloMode` from `--yolo` flag, `strictMode` from `--strict` flag
+
+#### Hermes Parity
+
+| Feature | Hermes | aiyu Phase 5.2 |
+|---------|--------|----------------|
+| 3-tier classification | ✓ (tirith) | ✓ (command-classifier) |
+| once/session/always/deny | ✓ | ✓ |
+| Persistent allowlist | ✓ (flock) | ✓ (lockfile) |
+| Auto-deny timeout | 60s | 60s |
+| "always" hidden for dangerous | ✓ | ✓ |
+| /yolo bypass | ✓ | ✓ |
+| --strict mode | ✗ | ✓ (leapfrog) |
+| Project-scoped allowlist | ✓ | ✓ (via projectRoot) |
+
+---
+
 ### Phase 5 — SQLite Persistence + Interactive Session Picker
 
 #### Added
